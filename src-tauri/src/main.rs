@@ -7,8 +7,6 @@ mod config;
 mod error;
 mod hotkey;
 mod lang_detect;
-mod screenshot;
-mod system_ocr;
 mod tray;
 mod window;
 
@@ -19,9 +17,7 @@ use hotkey::*;
 use lang_detect::*;
 use log::info;
 use once_cell::sync::OnceCell;
-use screenshot::screenshot;
 use std::sync::Mutex;
-use system_ocr::*;
 use tauri::api::notification::Notification;
 use tauri::Manager;
 use tauri_plugin_log::LogTarget;
@@ -123,13 +119,11 @@ fn main() {
             cut_image,
             get_base64,
             copy_img,
-            system_ocr,
             set_proxy,
             unset_proxy,
             open_devtools,
             register_shortcut_by_frontend,
             update_tray,
-            screenshot,
             lang_detect,
             font_list
         ])

@@ -12,9 +12,7 @@ import { HiTranslate } from 'react-icons/hi';
 import { LuDelete } from 'react-icons/lu';
 import { invoke } from '@tauri-apps/api';
 import { atom, useAtom } from 'jotai';
-import { getServiceName } from '../../../../utils/service_instance';
 import { useConfig, useSyncAtom, useToastStyle } from '../../../../hooks';
-import * as recognizeServices from '../../../../services/recognize';
 import detect from '../../../../utils/lang_detect';
 import { store } from '../../../../utils/store';
 import { info } from 'tauri-plugin-log-api';
@@ -31,11 +29,7 @@ export default function SourceArea(props) {
     const [appFontSize] = useConfig('app_font_size', 16);
     const [sourceText, setSourceText, syncSourceText] = useSyncAtom(sourceTextAtom);
     const [detectLanguage, setDetectLanguage] = useAtom(detectLanguageAtom);
-    const [incrementalTranslate] = useConfig('incremental_translate', false);
     const [dynamicTranslate] = useConfig('dynamic_translate', false);
-    const [deleteNewline] = useConfig('translate_delete_newline', false);
-    const [recognizeLanguage] = useConfig('recognize_language', 'auto');
-    const [recognizeServiceList] = useConfig('recognize_service_list', ['system', 'tesseract']);
     const [hideWindow] = useConfig('translate_hide_window', false);
     const [hideSource] = useConfig('hide_source', false);
     const [windowType, setWindowType] = useState('[SELECTION_TRANSLATE]');
@@ -58,56 +52,10 @@ export default function SourceArea(props) {
             appWindow.show();
             appWindow.setFocus();
             setSourceText('', true);
-        } else if (text === '[IMAGE_TRANSLATE]') {
-            setWindowType('[IMAGE_TRANSLATE]');
-            const base64 = await invoke('get_base64');
-            const serviceInstanceKey = recognizeServiceList[0];
-            const serviceName = getServiceName(serviceInstanceKey);
-            if (recognizeLanguage in recognizeServices[serviceName].Language) {
-                const instanceConfig = serviceInstanceConfigMap[serviceInstanceKey];
-                recognizeServices[serviceName]
-                    .recognize(base64, recognizeServices[serviceName].Language[recognizeLanguage], {
-                        config: instanceConfig,
-                    })
-                    .then(
-                        (v) => {
-                            let newText = v.trim();
-                            if (deleteNewline) {
-                                newText = v.replace(/\-\s+/g, '').replace(/\s+/g, ' ');
-                            }
-                            if (incrementalTranslate) {
-                                setSourceText((old) => {
-                                    return old + ' ' + newText;
-                                });
-                            } else {
-                                setSourceText(newText);
-                            }
-                            detect_language(newText).then(() => {
-                                syncSourceText();
-                            });
-                        },
-                        (e) => {
-                            setSourceText(e.toString());
-                        }
-                    );
-            } else {
-                setSourceText('Language not supported');
-            }
         } else {
             setWindowType('[SELECTION_TRANSLATE]');
-            let newText = text.trim();
-            if (deleteNewline) {
-                newText = text.replace(/\-\s+/g, '').replace(/\s+/g, ' ');
-            } else {
-                newText = text.trim();
-            }
-            if (incrementalTranslate) {
-                setSourceText((old) => {
-                    return old + ' ' + newText;
-                });
-            } else {
-                setSourceText(newText);
-            }
+            const newText = text.trim();
+            setSourceText(newText);
             detect_language(newText).then(() => {
                 syncSourceText();
             });
@@ -142,18 +90,12 @@ export default function SourceArea(props) {
     }, [hideWindow]);
 
     useEffect(() => {
-        if (
-            deleteNewline !== null &&
-            incrementalTranslate !== null &&
-            recognizeLanguage !== null &&
-            recognizeServiceList !== null &&
-            hideWindow !== null
-        ) {
+        if (hideWindow !== null) {
             invoke('get_text').then((v) => {
                 handleNewText(v);
             });
         }
-    }, [deleteNewline, incrementalTranslate, recognizeLanguage, recognizeServiceList, hideWindow]);
+    }, [hideWindow]);
 
     useEffect(() => {
         textAreaRef.current.style.height = '50px';

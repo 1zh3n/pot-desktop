@@ -16,13 +16,8 @@ import { invoke } from '@tauri-apps/api';
 export default function Translate() {
     const [sourceLanguage, setSourceLanguage] = useConfig('translate_source_language', 'auto');
     const [targetLanguage, setTargetLanguage] = useConfig('translate_target_language', 'zh_cn');
-    const [secondLanguage, setSecondLanguage] = useConfig('translate_second_language', 'en');
     const [detectEngine, setDetectEngine] = useConfig('translate_detect_engine', 'baidu');
     const [autoCopy, setAutoCopy] = useConfig('translate_auto_copy', 'disable');
-    const [incrementalTranslate, setIncrementalTranslate] = useConfig('incremental_translate', false);
-    const [historyDisable, setHistoryDisable] = useConfig('history_disable', false);
-    const [dynamicTranslate, setDynamicTranslate] = useConfig('dynamic_translate', false);
-    const [deleteNewline, setDeleteNewline] = useConfig('translate_delete_newline', false);
     const [rememberLanguage, setRememberLanguage] = useConfig('translate_remember_language', false);
     // const [translateFontSize, setTranslateFontSize] = useConfig('translate_font_size', 16);
     const [windowPosition, setWindowPosition] = useConfig('translate_window_position', 'mouse');
@@ -72,27 +67,6 @@ export default function Translate() {
                                     className='max-h-[50vh] overflow-y-auto'
                                     onAction={(key) => {
                                         setTargetLanguage(key);
-                                    }}
-                                >
-                                    {languageList.map((item) => {
-                                        return <DropdownItem key={item}>{t(`languages.${item}`)}</DropdownItem>;
-                                    })}
-                                </DropdownMenu>
-                            </Dropdown>
-                        )}
-                    </div>
-                    <div className='config-item'>
-                        <h3 className='my-auto mx-0'>{t('config.translate.second_language')}</h3>
-                        {secondLanguage !== null && (
-                            <Dropdown>
-                                <DropdownTrigger>
-                                    <Button variant='bordered'>{t(`languages.${secondLanguage}`)}</Button>
-                                </DropdownTrigger>
-                                <DropdownMenu
-                                    aria-label='second language'
-                                    className='max-h-[50vh] overflow-y-auto'
-                                    onAction={(key) => {
-                                        setSecondLanguage(key);
                                     }}
                                 >
                                     {languageList.map((item) => {
@@ -154,50 +128,6 @@ export default function Translate() {
                                     <DropdownItem key='disable'>{t('config.translate.disable')}</DropdownItem>
                                 </DropdownMenu>
                             </Dropdown>
-                        )}
-                    </div>
-                    <div className='config-item'>
-                        <h3>{t('config.translate.history_disable')}</h3>
-                        {historyDisable !== null && (
-                            <Switch
-                                isSelected={historyDisable}
-                                onValueChange={(v) => {
-                                    setHistoryDisable(v);
-                                }}
-                            />
-                        )}
-                    </div>
-                    <div className='config-item'>
-                        <h3 className='my-auto mx-0'>{t('config.translate.incremental_translate')}</h3>
-                        {incrementalTranslate !== null && (
-                            <Switch
-                                isSelected={incrementalTranslate}
-                                onValueChange={(v) => {
-                                    setIncrementalTranslate(v);
-                                }}
-                            />
-                        )}
-                    </div>
-                    <div className='config-item'>
-                        <h3 className='my-auto mx-0'>{t('config.translate.dynamic_translate')}</h3>
-                        {dynamicTranslate !== null && (
-                            <Switch
-                                isSelected={dynamicTranslate}
-                                onValueChange={(v) => {
-                                    setDynamicTranslate(v);
-                                }}
-                            />
-                        )}
-                    </div>
-                    <div className='config-item'>
-                        <h3 className='my-auto mx-0'>{t('config.translate.delete_newline')}</h3>
-                        {deleteNewline !== null && (
-                            <Switch
-                                isSelected={deleteNewline}
-                                onValueChange={(v) => {
-                                    setDeleteNewline(v);
-                                }}
-                            />
                         )}
                     </div>
                     <div className='config-item'>

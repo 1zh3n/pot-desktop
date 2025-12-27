@@ -6,9 +6,7 @@ import React, { useEffect } from 'react';
 import { useTheme } from 'next-themes';
 
 import { invoke } from '@tauri-apps/api/tauri';
-import Screenshot from './window/Screenshot';
 import Translate from './window/Translate';
-import Recognize from './window/Recognize';
 import { store } from './utils/store';
 import Config from './window/Config';
 import { useConfig } from './hooks';
@@ -17,8 +15,6 @@ import './i18n';
 
 const windowMap = {
     translate: <Translate />,
-    screenshot: <Screenshot />,
-    recognize: <Recognize />,
     config: <Config />,
 };
 

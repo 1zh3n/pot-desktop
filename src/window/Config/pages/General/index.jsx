@@ -30,9 +30,7 @@ export default function General() {
     const [appLanguage, setAppLanguage] = useConfig('app_language', 'en');
     const [appTheme, setAppTheme] = useConfig('app_theme', 'system');
     const [appFont, setAppFont] = useConfig('app_font', 'default');
-    const [appFallbackFont, setAppFallbackFont] = useConfig('app_fallback_font', 'default');
     const [appFontSize, setAppFontSize] = useConfig('app_font_size', 16);
-    const [transparent, setTransparent] = useConfig('transparent', true);
     const [devMode, setDevMode] = useConfig('dev_mode', false);
     const [trayClickEvent, setTrayClickEvent] = useConfig('tray_click_event', 'config');
     const [proxyEnable, setProxyEnable] = useConfig('proxy_enable', false);
@@ -332,56 +330,9 @@ export default function General() {
                                     aria-label='app font'
                                     className='max-h-[50vh] overflow-y-auto'
                                     onAction={(key) => {
-                                        document.documentElement.style.fontFamily = `"${
-                                            key === 'default' ? 'sans-serif' : key
-                                        }","${appFallbackFont === 'default' ? 'sans-serif' : appFallbackFont}"`;
+                                        const primary = key === 'default' ? 'sans-serif' : key;
+                                        document.documentElement.style.fontFamily = `"${primary}"`;
                                         setAppFont(key);
-                                    }}
-                                >
-                                    <DropdownItem
-                                        style={{ fontFamily: 'sans-serif' }}
-                                        key='default'
-                                    >
-                                        {t('config.general.default_font')}
-                                    </DropdownItem>
-                                    {fontList.map((x) => {
-                                        return (
-                                            <DropdownItem
-                                                style={{ fontFamily: x }}
-                                                key={x}
-                                            >
-                                                {x}
-                                            </DropdownItem>
-                                        );
-                                    })}
-                                </DropdownMenu>
-                            </Dropdown>
-                        )}
-                    </div>
-                    <div className='config-item'>
-                        <h3 className='my-auto'>{t('config.general.app_fallback_font')}</h3>
-                        {appFallbackFont !== null && fontList !== null && (
-                            <Dropdown>
-                                <DropdownTrigger>
-                                    <Button
-                                        variant='bordered'
-                                        style={{
-                                            fontFamily: appFallbackFont === 'default' ? 'sans-serif' : appFallbackFont,
-                                        }}
-                                    >
-                                        {appFallbackFont === 'default'
-                                            ? t('config.general.default_font')
-                                            : appFallbackFont}
-                                    </Button>
-                                </DropdownTrigger>
-                                <DropdownMenu
-                                    aria-label='app font'
-                                    className='max-h-[50vh] overflow-y-auto'
-                                    onAction={(key) => {
-                                        document.documentElement.style.fontFamily = `"${
-                                            appFont === 'default' ? 'sans-serif' : appFont
-                                        }","${key === 'default' ? 'sans-serif' : key}"`;
-                                        setAppFallbackFont(key);
                                     }}
                                 >
                                     <DropdownItem
@@ -448,23 +399,9 @@ export default function General() {
                                     <DropdownItem key='ocr_recognize'>
                                         {t('config.general.event.ocr_recognize')}
                                     </DropdownItem>
-                                    <DropdownItem key='ocr_translate'>
-                                        {t('config.general.event.ocr_translate')}
-                                    </DropdownItem>
                                     <DropdownItem key='disable'>{t('config.general.event.disable')}</DropdownItem>
                                 </DropdownMenu>
                             </Dropdown>
-                        )}
-                    </div>
-                    <div className={`config-item ${osType === 'Darwin' && 'hidden'}`}>
-                        <h3>{t('config.general.transparent')}</h3>
-                        {transparent !== null && (
-                            <Switch
-                                isSelected={transparent}
-                                onValueChange={(v) => {
-                                    setTransparent(v);
-                                }}
-                            />
                         )}
                     </div>
                     <div className='config-item'>

@@ -79,18 +79,7 @@
     - 监听 Tauri 的 `blur`/`focus`/`move`/`resize` 事件，在合适时自动关闭或保存位置/尺寸
     - 通过 `BsPinFill` 控制是否置顶及是否关闭失焦监听
 
-- **Recognize OCR 识别窗口**：`src/window/Recognize/index.jsx`
-  - 包括：
-    - `ImageArea`：展示截取的图片
-    - `TextArea`：展示识别出的文字
-    - `ControlArea`：选择识别服务、触发识别、复制结果等
-  - 与后端 `system_ocr`、`screenshot` 等命令配合使用，实现「截图 → OCR → 文本」流程
-
-- **Screenshot 截图窗口**：`src/window/Screenshot/index.jsx`
-  - 用于非 macOS 下的区域截图：
-    - 接收后端 `screenshot` 命令生成的整屏截图（缓存文件）
-    - 在前端显示屏幕图像，用户框选区域后通过事件回传坐标给后端裁剪
-  - 截图完成后，会发出 `success` 事件，被后端监听以继续后续 OCR/翻译流程
+（精简版中已移除了独立的 OCR 识别窗口和截图窗口，仅保留翻译窗口。）
 
 - **Config 设置窗口**：`src/window/Config/index.jsx` 与子路由
   - 结构：
@@ -98,11 +87,10 @@
     - 路由分发：`src/window/Config/routes/index.jsx`
   - 设置页（`src/window/Config/pages`）在精简版中主要包括：
     - `General`：通用设置（语言、主题、启动行为等）
-    - `Translate` / `Recognize`：翻译与 OCR 服务启用、排序、默认服务等
+    - `Translate`：翻译服务启用、排序、默认服务等
     - `Service`：服务实例配置
     - `Hotkey`：全局快捷键配置（与后端 `hotkey.rs` 对应）
-    - `History`：翻译/识别历史记录（可选）
-    - `About`：版本/日志目录/开源地址等信息
+    - `About`：版本/日志目录/开源地址/配置目录等信息
 
 ### 2. 通用组件与 Hooks
 
@@ -130,15 +118,7 @@
 - **翻译服务**：`src/services/translate/`
   - 仅保留少量常用服务，例如：`youdao`、`google`、`deepl` 等。
 
-- **OCR 识别服务**：`src/services/recognize/`
-  - 精简为系统 OCR 与 Tesseract 等少数本地/系统服务。
-
-在精简版中不再启用：
-
-- `src/services/tts/`：TTS 语音朗读功能。
-- `src/services/collection/`：与 Anki、欧路词典等收藏集成功能。
-
-保留的服务在配置界面（`Config` 窗口）中统一管理，在翻译窗口中按配置顺序展示。
+（精简版中已移除了 OCR 识别服务目录，仅保留翻译服务相关代码。）
 
 ## 四、后端（Tauri/Rust）入口与模块
 
@@ -166,8 +146,8 @@
   - `invoke_handler`：
     - 精简版仅暴露当前前端需要的命令，例如：
       - 配置：`reload_store`
-      - 文本 & 截图：`get_text` / `cut_image` / `get_base64` / `copy_img` / `screenshot`
-      - OCR / 语言检测：`system_ocr` / `lang_detect`
+      - 文本相关：`get_text` / `cut_image` / `get_base64` / `copy_img`
+      - 语言检测：`lang_detect`
       - 窗口 & 快捷键：`open_devtools` / `register_shortcut_by_frontend` / `update_tray`
       - 其他：`set_proxy` / `unset_proxy` / `font_list`
   - `on_system_tray_event`：
@@ -188,16 +168,13 @@
 
 ### 3. 窗口与业务逻辑模块
 
-- **window.rs**：`src-tauri/src/window.rs`
+-- **window.rs**：`src-tauri/src/window.rs`
   - 负责所有前端窗口的创建与复用：
     - `get_daemon_window`：获取/创建隐藏的 `daemon` 窗口，用于获取监视器信息等
     - `build_window`：统一的窗口构建函数，根据鼠标所在屏幕创建窗口、设置无边框/阴影/透明等
     - `config_window`：配置窗口
     - `translate_window`：翻译窗口，支持记忆上次窗口大小/位置
-    - `selection_translate` / `input_translate` / `text_translate` / `image_translate`：不同翻译触发方式，通过修改全局 `StringWrapper` 状态并向前端发出 `new_text` 事件
-    - `recognize_window`：OCR 识别窗口
-    - `screenshot_window`：全屏截图窗口（非 macOS）
-    - `ocr_recognize` / `ocr_translate`：完整的截图→识别→显示/翻译流程控制
+    - `selection_translate` / `input_translate` / `text_translate`：不同翻译触发方式，通过修改全局 `StringWrapper` 状态并向前端发出 `new_text` 事件
 
 - **hotkey.rs**：`src-tauri/src/hotkey.rs:1-71, 73-98`
   - 提供全局快捷键注册逻辑：
@@ -212,13 +189,8 @@
     - 字体列表获取：`font_list`
     - DevTools 控制：`open_devtools`
 
-- **screenshot.rs**：`src-tauri/src/screenshot.rs:3-30`
-  - 根据传入坐标找到对应屏幕，截取整屏图像并保存到缓存目录
-  - 与前端截图窗口联动完成区域截图
-
 - **其他模块（概览）**
   - `clipboard.rs`：剪贴板监控与文本同步（结合 `ClipboardMonitorEnableWrapper`）。
-  - `system_ocr.rs`：调用系统原生 OCR 能力（Windows/macOS）。
   - `lang_detect.rs`：本地语言检测引擎初始化与调用（可选）。
   - `tray.rs`：系统托盘菜单与点击事件处理。
 

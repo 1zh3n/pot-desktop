@@ -70,7 +70,6 @@ export default function Translate() {
         'google',
         'deepl',
     ]);
-    const [recognizeServiceInstanceList] = useConfig('recognize_service_list', ['system', 'tesseract']);
     const [hideLanguage] = useConfig('hide_language', false);
     const [pined, setPined] = useState(false);
     const [serviceInstanceConfigMap, setServiceInstanceConfigMap] = useState(null);
@@ -158,16 +157,13 @@ export default function Translate() {
         for (const serviceInstanceKey of translateServiceInstanceList) {
             config[serviceInstanceKey] = (await store.get(serviceInstanceKey)) ?? {};
         }
-        for (const serviceInstanceKey of recognizeServiceInstanceList) {
-            config[serviceInstanceKey] = (await store.get(serviceInstanceKey)) ?? {};
-        }
         setServiceInstanceConfigMap({ ...config });
     };
     useEffect(() => {
-        if (translateServiceInstanceList !== null && recognizeServiceInstanceList !== null) {
+        if (translateServiceInstanceList !== null) {
             loadServiceInstanceConfigMap();
         }
-    }, [translateServiceInstanceList, recognizeServiceInstanceList]);
+    }, [translateServiceInstanceList]);
 
     return (
         <div

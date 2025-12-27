@@ -66,23 +66,8 @@
 
 ### 3. OCR 精简决策（已确认）
 
-- 保留的 OCR 服务（本地）：
-  - `system`：系统内置 OCR（Windows/macOS 原生接口，Linux 仅在可用平台下生效）
-  - `tesseract`：本地 Tesseract 引擎 OCR
-- 移除的 OCR 服务：
-  - `baidu_ocr`
-  - `baidu_accurate_ocr`
-  - `baidu_img_ocr`
-  - `iflytek_ocr`
-  - `iflytek_intsig_ocr`
-  - `iflytek_latex_ocr`
-  - `qrcode`
-  - `simple_latex_ocr`
-  - `tencent_ocr`
-  - `tencent_accurate_ocr`
-  - `tencent_img_ocr`
-  - `volcengine_ocr`
-  - `volcengine_multi_lang_ocr`
+- 精简版中已完全移除 OCR 识别功能与相关服务目录（`src/services/recognize/*`）。
+- 对应的后端模块（`system_ocr`、`screenshot` 等）也已删除，不再提供任何截图识别能力。
 
 ### 4. 翻译服务精简决策（已确认）
 
@@ -94,6 +79,22 @@
   - 其他服务可以在前端/配置中移除或物理删除，不再参与构建。
 
 ---
+
+### 5. 进一步精简计划（本轮）
+
+- 整体功能级别：
+  - 移除历史记录功能（前端页面与后端历史存储相关逻辑）。
+  - 移除文字识别功能（独立识别窗口、OCR 入口等）。
+  - 移除截图翻译功能（截图后直接翻译的整条链路）。
+- 设置模块：
+  - 常规设置：移除后备字体设置项；当指定字体不可用时回退到默认字体；移除透明效果相关配置与逻辑。
+  - 翻译设置：移除第二种目标语言；移除历史记录相关开关；移除增量翻译功能；移除自动删除换行设置。
+  - 文字识别设置：整块配置页移除。
+  - 热键设置：移除与上述已删除功能相关的快捷键项（截图识别、截图翻译、历史等）。
+  - 服务设置：移除文字识别服务设置，仅保留翻译服务部分。
+  - 历史记录页面：整体移除。
+
+以上精简项会同步更新前端 UI、配置项、以及不再使用的后端命令/模块，避免残留死代码。
 
 ## 二、前端（React）侧的裁剪建议
 
@@ -202,12 +203,12 @@
 - 精简思路：
   - 仅保留前端还会调用的命令，例如：
     - 配置：`reload_store`
-    - 文本 & 截图：`get_text` / `cut_image` / `get_base64` / `copy_img` / `screenshot`
-    - OCR / 翻译相关：`system_ocr` / `lang_detect`（如保留）
+    - 文本相关：`get_text` / `cut_image` / `get_base64` / `copy_img`
+    - 语言检测：`lang_detect`
     - 窗口 & 快捷键：`open_devtools` / `register_shortcut_by_frontend` / `update_tray`
   - 移除不再需要的命令：
     - 插件：`install_plugin` / `run_binary`
-    - 备份：`webdav` / `aliyun` / `local` 等（取决于最终是否保留备份功能）
+    - 备份：`webdav` / `aliyun` / `local` 等
     - 更新：`updater_window` 及 `check_update` 等
 
 ### 3. 配置模块中的服务列表裁剪（已完成）

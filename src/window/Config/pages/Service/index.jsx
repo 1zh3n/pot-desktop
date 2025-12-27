@@ -2,7 +2,6 @@ import { useTranslation } from 'react-i18next';
 import { Tabs, Tab } from '@nextui-org/react';
 import React from 'react';
 import Translate from './Translate';
-import Recognize from './Recognize';
 
 let unlisten = null;
 
@@ -15,12 +14,6 @@ export default function Service() {
                 title={t(`config.service.translate`)}
             >
                 <Translate />
-            </Tab>
-            <Tab
-                key='recognize'
-                title={t(`config.service.recognize`)}
-            >
-                <Recognize />
             </Tab>
         </Tabs>
     );

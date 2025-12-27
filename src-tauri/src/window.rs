@@ -1,9 +1,11 @@
+#[cfg(target_os = "macos")]
 use std::fs;
 
 use crate::config::get;
 use crate::config::set;
 use crate::StringWrapper;
 use crate::APP;
+#[cfg(target_os = "macos")]
 use dirs::cache_dir;
 use log::{info, warn};
 use tauri::Manager;
@@ -400,12 +402,3 @@ pub fn ocr_translate() {
     }
 }
 
-#[tauri::command(async)]
-pub fn updater_window() {
-    let (window, _exists) = build_window("updater", "Updater");
-    window
-        .set_min_size(Some(tauri::LogicalSize::new(600, 400)))
-        .unwrap();
-    window.set_size(tauri::LogicalSize::new(600, 400)).unwrap();
-    window.center().unwrap();
-}

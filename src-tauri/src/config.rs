@@ -51,53 +51,15 @@ fn check_available(list: Vec<String>, builtin: Vec<&str>, plugin: Vec<String>, k
 }
 
 pub fn check_service_available() -> Result<(), Error> {
-    let builtin_recognize_list: Vec<&str> = vec![
-        "baidu_ocr",
-        "baidu_accurate_ocr",
-        "baidu_img_ocr",
-        "iflytek_ocr",
-        "iflytek_intsig_ocr",
-        "iflytek_latex_ocr",
-        "qrcode",
-        "simple_latex_ocr",
-        "system",
-        "tencent_ocr",
-        "tencent_accurate_ocr",
-        "tencent_img_ocr",
-        "tesseract",
-        "volcengine_ocr",
-        "volcengine_multi_lang_ocr",
-    ];
+    let builtin_recognize_list: Vec<&str> = vec!["system", "tesseract"];
     let builtin_translate_list: Vec<&str> = vec![
-        "alibaba",
-        "baidu",
-        "baidu_field",
-        "bing",
-        "bing_dict",
-        "caiyun",
-        "cambridge_dict",
-        "chatglm",
-        "deepl",
-        "ecdict",
-        "lingva",
-        "geminipro",
-        "niutrans",
-        "ollama",
-        "openai",
-        "google",
-        "tencent",
-        "transmart",
-        "volcengine",
-        "yandex",
         "youdao",
+        "google",
+        "deepl",
     ];
-    let builtin_tts_list: Vec<&str> = vec!["lingva_tts"];
-    let builtin_collection_list: Vec<&str> = vec!["anki", "eudic"];
 
-    let plugin_recognize_list: Vec<String> = get_plugin_list("recognize").unwrap_or_default();
-    let plugin_translate_list: Vec<String> = get_plugin_list("translate").unwrap_or_default();
-    let plugin_tts_list: Vec<String> = get_plugin_list("tts").unwrap_or_default();
-    let plugin_collection_list: Vec<String> = get_plugin_list("collection").unwrap_or_default();
+    let plugin_recognize_list: Vec<String> = Vec::new();
+    let plugin_translate_list: Vec<String> = Vec::new();
     if let Some(recognize_service_list) = get("recognize_service_list") {
         let recognize_service_list: Vec<String> = serde_json::from_value(recognize_service_list)?;
         check_available(
@@ -116,53 +78,7 @@ pub fn check_service_available() -> Result<(), Error> {
             "translate_service_list",
         );
     }
-    if let Some(tts_service_list) = get("tts_service_list") {
-        let tts_service_list: Vec<String> = serde_json::from_value(tts_service_list)?;
-        check_available(
-            tts_service_list,
-            builtin_tts_list,
-            plugin_tts_list,
-            "tts_service_list",
-        );
-    }
-    if let Some(collection_service_list) = get("collection_service_list") {
-        let collection_service_list: Vec<String> = serde_json::from_value(collection_service_list)?;
-        check_available(
-            collection_service_list,
-            builtin_collection_list,
-            plugin_collection_list,
-            "collection_service_list",
-        );
-    }
     Ok(())
-}
-
-pub fn get_plugin_list(plugin_type: &str) -> Option<Vec<String>> {
-    let app_handle = APP.get().unwrap();
-    let config_dir = dirs::config_dir()?;
-    let config_dir = config_dir.join(app_handle.config().tauri.bundle.identifier.clone());
-    let plugin_dir = config_dir.join("plugins");
-    let plugin_dir = plugin_dir.join(plugin_type);
-
-    // dirs in plugin_dir
-    let mut plugin_list = vec![];
-    if plugin_dir.exists() {
-        let read_dir = std::fs::read_dir(plugin_dir).ok()?;
-        for entry in read_dir {
-            let entry = entry.ok()?;
-
-            if entry.path().is_dir() {
-                let name = entry.file_name().to_str()?.to_string();
-                if name.starts_with("plugin") {
-                    plugin_list.push(name);
-                } else {
-                    // Remove old plugin
-                    let _ = std::fs::remove_dir_all(entry.path());
-                }
-            }
-        }
-    }
-    Some(plugin_list)
 }
 
 pub fn get(key: &str) -> Option<Value> {

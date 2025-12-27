@@ -9,6 +9,7 @@ import { osType } from '../../../../../../utils/env';
 export default function SelectModal(props) {
     const { isOpen, onOpenChange, setCurrentConfigKey, onConfigOpen } = props;
     const { t } = useTranslation();
+    const allowedServices = ['system', 'tesseract'];
 
     return (
         <Modal
@@ -21,7 +22,9 @@ export default function SelectModal(props) {
                     <>
                         <ModalHeader>{t('config.service.add_service')}</ModalHeader>
                         <ModalBody>
-                            {Object.keys(builtinServices).map((x) => {
+                            {Object.keys(builtinServices)
+                                .filter((x) => allowedServices.includes(x))
+                                .map((x) => {
                                 return (
                                     <div key={x}>
                                         <Button

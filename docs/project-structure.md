@@ -73,11 +73,8 @@
     - `translate_always_on_top`：是否默认置顶
     - `translate_window_position`、`translate_remember_window_size`：窗口位置和大小的记忆与持久化
   - 服务实例管理：
-    - 多个服务实例列表（翻译、识别、TTS、单词本/生词本等）从配置读取：`useConfig('translate_service_list'...)` 等
-    - 通过 `DragDropContext` 支持翻译服务卡片拖拽排序，修改后写回配置
-  - 插件管理：
-    - 启动时从 `AppConfig/plugins/*` 目录扫描插件，读取 `info.json` 构建 `pluginList`
-    - 若插件声明自定义图标，则通过 `convertFileSrc` 转换成本地可显示路径
+    - 通过 `useConfig('translate_service_list'...)` 读取翻译服务列表，仅保留少量内置服务（如有道 / Google / DeepL）。
+    - 通过 `DragDropContext` 支持翻译服务卡片拖拽排序，修改后写回配置。
   - 窗口行为：
     - 监听 Tauri 的 `blur`/`focus`/`move`/`resize` 事件，在合适时自动关闭或保存位置/尺寸
     - 通过 `BsPinFill` 控制是否置顶及是否关闭失焦监听
@@ -99,21 +96,13 @@
   - 结构：
     - 侧边栏：`src/window/Config/components/SideBar/index.jsx`
     - 路由分发：`src/window/Config/routes/index.jsx`
-  - 设置页（`src/window/Config/pages`）包括：
+  - 设置页（`src/window/Config/pages`）在精简版中主要包括：
     - `General`：通用设置（语言、主题、启动行为等）
-    - `Translate` / `Recognize` / `Tts` / `Collection`：各类服务启用、排序、默认服务等
-    - `Service`：服务实例配置与插件管理（包含 `Translate/Recognize/Tts/Collection` 子模块）
+    - `Translate` / `Recognize`：翻译与 OCR 服务启用、排序、默认服务等
+    - `Service`：服务实例配置
     - `Hotkey`：全局快捷键配置（与后端 `hotkey.rs` 对应）
-    - `History`：翻译/识别历史记录
-    - `Backup`：配置备份/恢复（对应后端 `backup.rs`）
+    - `History`：翻译/识别历史记录（可选）
     - `About`：版本/日志目录/开源地址等信息
-
-- **Updater 更新窗口**：`src/window/Updater/index.jsx`
-  - 使用 Tauri `@tauri-apps/api/updater` 与后端 `updater_window` 协作：
-    - 检查更新：`checkUpdate`
-    - 下载 & 安装：`installUpdate`
-  - 通过 `ReactMarkdown` 渲染更新日志
-  - 根据 OS 类型（`osType`，来自 `src/utils/env.js`）做部分 UI 适配
 
 ### 2. 通用组件与 Hooks
 
@@ -136,21 +125,20 @@
 - `index.jsx`：服务调用逻辑（请求参数构造、HTTP 请求、结果解析）
 - `info.ts`：服务元数据定义（名称、图标、支持语言等）
 
-主要类别：
+主要类别（精简版）：
 
 - **翻译服务**：`src/services/translate/`
-  - 内置支持包括：阿里云、百度（通用/领域）、必应/Bing 字典、彩云、剑桥词典、ChatGLM、DeepL、Ecdict、本地/代理服务、Google、Lingva、Geminipro、Niutrans、Ollama、OpenAI、腾讯、Transmart、火山引擎、Yandex、有道等
+  - 仅保留少量常用服务，例如：`youdao`、`google`、`deepl` 等。
 
 - **OCR 识别服务**：`src/services/recognize/`
-  - 支持百度多种 OCR、科大讯飞（含 Latex）、腾讯 OCR、Tesseract、本地图像 OCR、二维码识别等
+  - 精简为系统 OCR 与 Tesseract 等少数本地/系统服务。
 
-- **TTS 语音服务**：`src/services/tts/`
-  - 目前主要是 `lingva_tts`
+在精简版中不再启用：
 
-- **生词本/收藏服务**：`src/services/collection/`
-  - 与 Anki、欧路词典等软件对接，实现翻译结果的快速加入单词本
+- `src/services/tts/`：TTS 语音朗读功能。
+- `src/services/collection/`：与 Anki、欧路词典等收藏集成功能。
 
-这些服务在配置界面（`Config` 窗口）中统一管理，在翻译窗口中按配置顺序展示。
+保留的服务在配置界面（`Config` 窗口）中统一管理，在翻译窗口中按配置顺序展示。
 
 ## 四、后端（Tauri/Rust）入口与模块
 
@@ -160,26 +148,28 @@
   - `build`：开发/构建命令（`pnpm dev` / `pnpm build`）、前端资源路径
   - `package`：应用名称、版本
   - `tauri.allowlist`：允许前端访问的 API（shell、window、clipboard、globalShortcut、http、fs 等）
-  - `tauri.bundle`：打包配置（图标、依赖、更新信息等）
+  - `tauri.bundle`：打包配置（图标、依赖等）
   - `tauri.windows`：内置 `daemon` 隐藏窗口（加载 `daemon.html`）
   - `systemTray`：系统托盘图标配置
-  - `updater`：更新服务配置（更新地址、签名公钥等）
 
-- **入口函数**：`src-tauri/src/main.rs:44-160`
+- **入口函数**：`src-tauri/src/main.rs:38-145`
   - `tauri::Builder::default()`：
     - 注册插件：单实例、日志、开机自启、SQL、配置存储、文件监控等
     - 创建系统托盘：`system_tray`，托盘逻辑在 `tray.rs`
   - `setup` 回调：
-    - 初始化全局 `APP` 句柄，供其他模块使用
-    - 调用 `init_config` 初始化配置存储（`src-tauri/src/config.rs:11-27`）
-    - 首次启动时打开配置窗口：`config_window()`（`src-tauri/src/window.rs:116-123`）
-    - 管理全局状态：`StringWrapper`（用于临时存储待翻译文本）、`ClipboardMonitorEnableWrapper` 等
-    - 启动 HTTP 服务：`start_server()`（`src-tauri/src/server.rs`）
-    - 注册全局快捷键：`register_shortcut("all")`（`src-tauri/src/hotkey.rs:42-71`）
-    - 根据配置初始化代理、语言检测、剪贴板监控等
-    - 启动更新检查：`check_update(app.handle())`
+    - 初始化全局 `APP` 句柄，供其他模块使用。
+    - 调用 `init_config` 初始化配置存储（`src-tauri/src/config.rs:11-27`）。
+    - 首次启动时打开配置窗口：`config_window()`（`src-tauri/src/window.rs`）。
+    - 管理全局状态：`StringWrapper`（用于临时存储待翻译文本）、`ClipboardMonitorEnableWrapper` 等。
+    - 注册全局快捷键：`register_shortcut("all")`（`src-tauri/src/hotkey.rs`）。
+    - 根据配置初始化代理、语言检测（可选）、剪贴板监控等。
   - `invoke_handler`：
-    - 将一系列 Rust 函数暴露给前端，例如：`reload_store`、`get_text`、`cut_image`、`get_base64`、`copy_img`、`system_ocr`、`set_proxy`/`unset_proxy`、`run_binary`、`open_devtools`、`register_shortcut_by_frontend`、`screenshot`、`lang_detect`、`webdav`、`local`、`install_plugin`、`font_list`、`aliyun` 等
+    - 精简版仅暴露当前前端需要的命令，例如：
+      - 配置：`reload_store`
+      - 文本 & 截图：`get_text` / `cut_image` / `get_base64` / `copy_img` / `screenshot`
+      - OCR / 语言检测：`system_ocr` / `lang_detect`
+      - 窗口 & 快捷键：`open_devtools` / `register_shortcut_by_frontend` / `update_tray`
+      - 其他：`set_proxy` / `unset_proxy` / `font_list`
   - `on_system_tray_event`：
     - 托盘事件回调委托给 `tray_event_handler`（`src-tauri/src/tray.rs`）
   - `run`：
@@ -187,21 +177,18 @@
 
 ### 2. 配置与服务可用性校验
 
-- **配置存储封装**：`src-tauri/src/config.rs:11-27, 168-182`
-  - `init_config`：在应用配置目录创建/加载 `config.json`，封装为 `StoreWrapper` 注入 Tauri 状态
-  - `get`/`set`：提供对配置的读取与写入，前端通过 `tauri-plugin-store-api` 间接使用
+- **配置存储封装**：`src-tauri/src/config.rs:11-27, 80-132`
+  - `init_config`：在应用配置目录创建/加载 `config.json`，封装为 `StoreWrapper` 注入 Tauri 状态。
+  - `get`/`set`：提供对配置的读取与写入，前端通过 `tauri-plugin-store-api` 间接使用。
 
-- **服务可用性检测**：`src-tauri/src/config.rs:29-137`
-  - 定义各类内置服务列表（翻译、OCR、TTS、收藏）
-  - 读取配置中的服务列表，并与当前内置服务 + 插件目录内容比对
-  - 若列表中包含已被移除的服务（内置移除或插件删除），则自动从配置中删除，避免前端引用不存在的服务
-
-- **插件管理辅助**：`src-tauri/src/config.rs:140-166`
-  - `get_plugin_list`：扫描配置目录下的 `plugins/<plugin_type>`，读取有效插件名称
+- **服务可用性检测**：`src-tauri/src/config.rs:29-83`
+  - 定义精简后的内置服务列表（仅翻译与 OCR 部分）。
+  - 读取配置中的服务列表，并与当前内置服务比对。
+  - 若列表中包含已被移除的服务，将其从配置中自动删除。
 
 ### 3. 窗口与业务逻辑模块
 
-- **window.rs**：`src-tauri/src/window.rs:16-221, 226-281, 283-401, 403-410`
+- **window.rs**：`src-tauri/src/window.rs`
   - 负责所有前端窗口的创建与复用：
     - `get_daemon_window`：获取/创建隐藏的 `daemon` 窗口，用于获取监视器信息等
     - `build_window`：统一的窗口构建函数，根据鼠标所在屏幕创建窗口、设置无边框/阴影/透明等
@@ -211,7 +198,6 @@
     - `recognize_window`：OCR 识别窗口
     - `screenshot_window`：全屏截图窗口（非 macOS）
     - `ocr_recognize` / `ocr_translate`：完整的截图→识别→显示/翻译流程控制
-    - `updater_window`：更新窗口的创建与尺寸控制
 
 - **hotkey.rs**：`src-tauri/src/hotkey.rs:1-71, 73-98`
   - 提供全局快捷键注册逻辑：
@@ -219,11 +205,10 @@
     - 支持前端通过 `register_shortcut_by_frontend` 直接更新快捷键
   - 快捷键回调会调用 `selection_translate`、`input_translate`、`ocr_recognize`、`ocr_translate` 等函数
 
-- **cmd.rs**：`src-tauri/src/cmd.rs:11-227`
+- **cmd.rs**：`src-tauri/src/cmd.rs`
   - 向前端暴露通用命令：
     - 文本/截图剪裁获取：`get_text`、`cut_image`、`get_base64`、`copy_img`
     - 网络代理管理：`set_proxy` / `unset_proxy`
-    - 插件安装与运行：`install_plugin`、`run_binary`
     - 字体列表获取：`font_list`
     - DevTools 控制：`open_devtools`
 
@@ -232,13 +217,10 @@
   - 与前端截图窗口联动完成区域截图
 
 - **其他模块（概览）**
-  - `clipboard.rs`：剪贴板监控与文本同步（结合 `ClipboardMonitorEnableWrapper`）
-  - `system_ocr.rs`：调用系统原生 OCR 能力（Windows/macOS）
-  - `lang_detect.rs`：本地语言检测引擎初始化与调用
-  - `backup.rs`：WebDAV、本地、阿里云 OSS 等备份/恢复功能
-  - `server.rs`：内置 HTTP 服务，供部分前端/插件交互使用
-  - `tray.rs`：系统托盘菜单与点击事件处理
-  - `updater.rs`：更新检查逻辑封装
+  - `clipboard.rs`：剪贴板监控与文本同步（结合 `ClipboardMonitorEnableWrapper`）。
+  - `system_ocr.rs`：调用系统原生 OCR 能力（Windows/macOS）。
+  - `lang_detect.rs`：本地语言检测引擎初始化与调用（可选）。
+  - `tray.rs`：系统托盘菜单与点击事件处理。
 
 ## 五、典型调用链示例
 

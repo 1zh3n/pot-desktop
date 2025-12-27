@@ -1,19 +1,15 @@
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from '@nextui-org/react';
 import { Table, TableHeader, TableColumn, TableBody, TableRow, TableCell } from '@nextui-org/react';
 import { readDir, BaseDirectory, readTextFile, exists } from '@tauri-apps/api/fs';
-import { Textarea, Button, ButtonGroup } from '@nextui-org/react';
+import { Textarea, Button } from '@nextui-org/react';
 import { appConfigDir, join } from '@tauri-apps/api/path';
 import { convertFileSrc } from '@tauri-apps/api/tauri';
 import React, { useEffect, useState } from 'react';
-import toast, { Toaster } from 'react-hot-toast';
 import { Pagination } from '@nextui-org/react';
 import { useTranslation } from 'react-i18next';
 import Database from 'tauri-plugin-sql-api';
 
-import * as builtinCollectionServices from '../../../../services/collection';
-import { invoke_plugin } from '../../../../utils/invoke_plugin';
 import * as builtinServices from '../../../../services/translate';
-import { useConfig, useToastStyle } from '../../../../hooks';
 import { LanguageFlag } from '../../../../utils/language';
 import { store } from '../../../../utils/store';
 import { osType } from '../../../../utils/env';
@@ -26,14 +22,12 @@ import {
 } from '../../../../utils/service_instance';
 
 export default function History() {
-    const [collectionServiceList] = useConfig('collection_service_list', []);
     const { isOpen, onOpen, onOpenChange } = useDisclosure();
     const [pluginList, setPluginList] = useState(null);
     const [selectedItem, setSelectItem] = useState(null);
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
     const [items, setItems] = useState([]);
-    const toastStyle = useToastStyle();
     const { t } = useTranslation();
     useEffect(() => {
         init();
@@ -93,7 +87,7 @@ export default function History() {
         return `${year}/${month}/${day} ${hour}:${minute}:${second}`;
     };
     const loadPluginList = async () => {
-        const serviceTypeList = ['translate', 'collection'];
+        const serviceTypeList = ['translate'];
         let temp = {};
         for (const serviceType of serviceTypeList) {
             temp[serviceType] = {};
@@ -122,7 +116,6 @@ export default function History() {
     return (
         pluginList !== null && (
             <>
-                <Toaster />
                 <Table
                     fullWidth
                     hideHeader
@@ -281,93 +274,6 @@ export default function History() {
                                         >
                                             {t('common.save')}
                                         </Button>
-                                        <ButtonGroup>
-                                            {collectionServiceList &&
-                                                collectionServiceList.map((instanceKey) => {
-                                                    return (
-                                                        <Button
-                                                            key={instanceKey}
-                                                            isIconOnly
-                                                            variant='light'
-                                                            onPress={async () => {
-                                                                if (
-                                                                    getServiceSouceType(instanceKey) ===
-                                                                    ServiceSourceType.PLUGIN
-                                                                ) {
-                                                                    const pluginConfig =
-                                                                        (await store.get(instanceKey)) ?? {};
-                                                                    let [func, utils] = await invoke_plugin(
-                                                                        'collection',
-                                                                        getServiceName(instanceKey)
-                                                                    );
-                                                                    func(selectedItem.text, selectedItem.result, {
-                                                                        config: pluginConfig,
-                                                                        utils,
-                                                                    }).then(
-                                                                        (_) => {
-                                                                            toast.success(
-                                                                                t('translate.add_collection_success'),
-                                                                                {
-                                                                                    style: toastStyle,
-                                                                                }
-                                                                            );
-                                                                        },
-                                                                        (e) => {
-                                                                            toast.error(e.toString(), {
-                                                                                style: toastStyle,
-                                                                            });
-                                                                        }
-                                                                    );
-                                                                } else {
-                                                                    const instanceConfig =
-                                                                        (await store.get(instanceKey)) ?? {};
-                                                                    builtinCollectionServices[
-                                                                        getServiceName(instanceKey)
-                                                                    ]
-                                                                        .collection(
-                                                                            selectedItem.text,
-                                                                            selectedItem.result,
-                                                                            {
-                                                                                config: instanceConfig,
-                                                                            }
-                                                                        )
-                                                                        .then(
-                                                                            (_) => {
-                                                                                toast.success(
-                                                                                    t(
-                                                                                        'translate.add_collection_success'
-                                                                                    ),
-                                                                                    {
-                                                                                        style: toastStyle,
-                                                                                    }
-                                                                                );
-                                                                            },
-                                                                            (e) => {
-                                                                                toast.error(e.toString(), {
-                                                                                    style: toastStyle,
-                                                                                });
-                                                                            }
-                                                                        );
-                                                                }
-                                                            }}
-                                                        >
-                                                            <img
-                                                                src={
-                                                                    getServiceSouceType(instanceKey) ===
-                                                                    ServiceSourceType.PLUGIN
-                                                                        ? pluginList['collection'][
-                                                                              getServiceName(instanceKey)
-                                                                          ].icon
-                                                                        : builtinCollectionServices[
-                                                                              getServiceName(instanceKey)
-                                                                          ].info.icon
-                                                                }
-                                                                className='h-[24px] w-[24px]'
-                                                            />
-                                                        </Button>
-                                                    );
-                                                })}
-                                        </ButtonGroup>
                                     </ModalFooter>
                                 </>
                             )

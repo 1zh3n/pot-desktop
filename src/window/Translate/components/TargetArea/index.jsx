@@ -18,7 +18,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { writeText } from '@tauri-apps/api/clipboard';
 import PulseLoader from 'react-spinners/PulseLoader';
 import { TbTransformFilled } from 'react-icons/tb';
-import { HiOutlineVolumeUp } from 'react-icons/hi';
 import { semanticColors } from '@nextui-org/theme';
 import toast, { Toaster } from 'react-hot-toast';
 import { MdContentCopy } from 'react-icons/md';
@@ -31,28 +30,18 @@ import { nanoid } from 'nanoid';
 import { useSpring, animated } from '@react-spring/web';
 import useMeasure from 'react-use-measure';
 
-import * as builtinCollectionServices from '../../../../services/collection';
 import { sourceLanguageAtom, targetLanguageAtom } from '../LanguageArea';
-import { useConfig, useToastStyle, useVoice } from '../../../../hooks';
+import { useConfig, useToastStyle } from '../../../../hooks';
 import { sourceTextAtom, detectLanguageAtom } from '../SourceArea';
-import { invoke_plugin } from '../../../../utils/invoke_plugin';
 import * as builtinServices from '../../../../services/translate';
-import * as builtinTtsServices from '../../../../services/tts';
 
 import { info, error as logError } from 'tauri-plugin-log-api';
-import {
-    INSTANCE_NAME_CONFIG_KEY,
-    ServiceSourceType,
-    getDisplayInstanceName,
-    getServiceName,
-    getServiceSouceType,
-    whetherPluginService,
-} from '../../../../utils/service_instance';
+import { INSTANCE_NAME_CONFIG_KEY, getDisplayInstanceName, getServiceName } from '../../../../utils/service_instance';
 
 let translateID = [];
 
 export default function TargetArea(props) {
-    const { index, name, translateServiceInstanceList, pluginList, serviceInstanceConfigMap, ...drag } = props;
+    const { index, name, translateServiceInstanceList, serviceInstanceConfigMap, ...drag } = props;
 
     const [currentTranslateServiceInstanceKey, setCurrentTranslateServiceInstanceKey] = useState(name);
     function getInstanceName(instanceKey, serviceNameSupplier) {
@@ -61,8 +50,6 @@ export default function TargetArea(props) {
     }
 
     const [appFontSize] = useConfig('app_font_size', 16);
-    const [collectionServiceList] = useConfig('collection_service_list', []);
-    const [ttsServiceList] = useConfig('tts_service_list', ['lingva_tts']);
     const [translateSecondLanguage] = useConfig('translate_second_language', 'en');
     const [historyDisable] = useConfig('history_disable', false);
     const [isLoading, setIsLoading] = useState(false);
@@ -79,11 +66,9 @@ export default function TargetArea(props) {
     const [clipboardMonitor] = useConfig('clipboard_monitor', false);
 
     const detectLanguage = useAtomValue(detectLanguageAtom);
-    const [ttsPluginInfo, setTtsPluginInfo] = useState();
     const { t } = useTranslation();
     const textAreaRef = useRef();
     const toastStyle = useToastStyle();
-    const speak = useVoice();
     const theme = useTheme();
 
     useEffect(() => {
@@ -166,20 +151,18 @@ export default function TargetArea(props) {
 
         const translateServiceName = getServiceName(currentTranslateServiceInstanceKey);
 
-        if (whetherPluginService(currentTranslateServiceInstanceKey)) {
-            const pluginInfo = pluginList['translate'][translateServiceName];
-            if (sourceLanguage in pluginInfo.language && targetLanguage in pluginInfo.language) {
-                let newTargetLanguage = targetLanguage;
-                if (sourceLanguage === 'auto' && targetLanguage === detectLanguage) {
-                    newTargetLanguage = translateSecondLanguage;
-                }
-                setIsLoading(true);
-                setHide(true);
-                const instanceConfig = serviceInstanceConfigMap[currentTranslateServiceInstanceKey];
-                instanceConfig['enable'] = 'true';
-                const setHideOnce = invokeOnce(setHide);
-                let [func, utils] = await invoke_plugin('translate', translateServiceName);
-                func(sourceText.trim(), pluginInfo.language[sourceLanguage], pluginInfo.language[newTargetLanguage], {
+        const LanguageEnum = builtinServices[translateServiceName].Language;
+        if (sourceLanguage in LanguageEnum && targetLanguage in LanguageEnum) {
+            let newTargetLanguage = targetLanguage;
+            if (sourceLanguage === 'auto' && targetLanguage === detectLanguage) {
+                newTargetLanguage = translateSecondLanguage;
+            }
+            setIsLoading(true);
+            setHide(true);
+            const instanceConfig = serviceInstanceConfigMap[currentTranslateServiceInstanceKey];
+            const setHideOnce = invokeOnce(setHide);
+            builtinServices[translateServiceName]
+                .translate(sourceText.trim(), LanguageEnum[sourceLanguage], LanguageEnum[newTargetLanguage], {
                     config: instanceConfig,
                     detect: detectLanguage,
                     setResult: (v) => {
@@ -187,8 +170,8 @@ export default function TargetArea(props) {
                         setResult(v);
                         setHideOnce(false);
                     },
-                    utils,
-                }).then(
+                })
+                .then(
                     (v) => {
                         info(`[${currentTranslateServiceInstanceKey}]resolve:` + v);
                         if (translateID[index] !== id) return;
@@ -237,82 +220,8 @@ export default function TargetArea(props) {
                         setIsLoading(false);
                     }
                 );
-            } else {
-                setError('Language not supported');
-            }
         } else {
-            const LanguageEnum = builtinServices[translateServiceName].Language;
-            if (sourceLanguage in LanguageEnum && targetLanguage in LanguageEnum) {
-                let newTargetLanguage = targetLanguage;
-                if (sourceLanguage === 'auto' && targetLanguage === detectLanguage) {
-                    newTargetLanguage = translateSecondLanguage;
-                }
-                setIsLoading(true);
-                setHide(true);
-                const instanceConfig = serviceInstanceConfigMap[currentTranslateServiceInstanceKey];
-                const setHideOnce = invokeOnce(setHide);
-                builtinServices[translateServiceName]
-                    .translate(sourceText.trim(), LanguageEnum[sourceLanguage], LanguageEnum[newTargetLanguage], {
-                        config: instanceConfig,
-                        detect: detectLanguage,
-                        setResult: (v) => {
-                            if (translateID[index] !== id) return;
-                            setResult(v);
-                            setHideOnce(false);
-                        },
-                    })
-                    .then(
-                        (v) => {
-                            info(`[${currentTranslateServiceInstanceKey}]resolve:` + v);
-                            if (translateID[index] !== id) return;
-                            setResult(typeof v === 'string' ? v.trim() : v);
-                            setIsLoading(false);
-                            if (v !== '') {
-                                setHideOnce(false);
-                            }
-                            if (!historyDisable) {
-                                addToHistory(
-                                    sourceText.trim(),
-                                    detectLanguage,
-                                    newTargetLanguage,
-                                    translateServiceName,
-                                    typeof v === 'string' ? v.trim() : v
-                                );
-                            }
-                            if (index === 0 && !clipboardMonitor) {
-                                switch (autoCopy) {
-                                    case 'target':
-                                        writeText(v).then(() => {
-                                            if (hideWindow) {
-                                                sendNotification({ title: t('common.write_clipboard'), body: v });
-                                            }
-                                        });
-                                        break;
-                                    case 'source_target':
-                                        writeText(sourceText.trim() + '\n\n' + v).then(() => {
-                                            if (hideWindow) {
-                                                sendNotification({
-                                                    title: t('common.write_clipboard'),
-                                                    body: sourceText.trim() + '\n\n' + v,
-                                                });
-                                            }
-                                        });
-                                        break;
-                                    default:
-                                        break;
-                                }
-                            }
-                        },
-                        (e) => {
-                            info(`[${currentTranslateServiceInstanceKey}]reject:` + e);
-                            if (translateID[index] !== id) return;
-                            setError(e.toString());
-                            setIsLoading(false);
-                        }
-                    );
-            } else {
-                setError('Language not supported');
-            }
+            setError('Language not supported');
         }
     };
 
@@ -325,47 +234,6 @@ export default function TargetArea(props) {
             }
         }
     }, [result]);
-
-    // refresh tts config
-    useEffect(() => {
-        if (ttsServiceList && getServiceSouceType(ttsServiceList[0]) === ServiceSourceType.PLUGIN) {
-            readTextFile(`plugins/tts/${getServiceName(ttsServiceList[0])}/info.json`, {
-                dir: BaseDirectory.AppConfig,
-            }).then((infoStr) => {
-                setTtsPluginInfo(JSON.parse(infoStr));
-            });
-        }
-    }, [ttsServiceList]);
-
-    // handle tts speak
-    const handleSpeak = async () => {
-        const instanceKey = ttsServiceList[0];
-        if (getServiceSouceType(instanceKey) === ServiceSourceType.PLUGIN) {
-            const pluginConfig = serviceInstanceConfigMap[instanceKey];
-            if (!(targetLanguage in ttsPluginInfo.language)) {
-                throw new Error('Language not supported');
-            }
-            let [func, utils] = await invoke_plugin('tts', getServiceName(instanceKey));
-            let data = await func(result, ttsPluginInfo.language[targetLanguage], {
-                config: pluginConfig,
-                utils,
-            });
-            speak(data);
-        } else {
-            if (!(targetLanguage in builtinTtsServices[getServiceName(instanceKey)].Language)) {
-                throw new Error('Language not supported');
-            }
-            const instanceConfig = serviceInstanceConfigMap[instanceKey];
-            let data = await builtinTtsServices[getServiceName(instanceKey)].tts(
-                result,
-                builtinTtsServices[getServiceName(instanceKey)].Language[targetLanguage],
-                {
-                    config: instanceConfig,
-                }
-            );
-            speak(data);
-        }
-    };
 
     const [boundRef, bounds] = useMeasure({ scroll: true });
     const springs = useSpring({
@@ -392,37 +260,22 @@ export default function TargetArea(props) {
                                 variant='solid'
                                 className='bg-transparent'
                                 startContent={
-                                    whetherPluginService(currentTranslateServiceInstanceKey) ? (
-                                        <img
-                                            src={
-                                                pluginList['translate'][
-                                                    getServiceName(currentTranslateServiceInstanceKey)
-                                                ].icon
-                                            }
-                                            className='h-[20px] my-auto'
-                                        />
-                                    ) : (
-                                        <img
-                                            src={
-                                                builtinServices[getServiceName(currentTranslateServiceInstanceKey)].info
-                                                    .icon
-                                            }
-                                            className='h-[20px] my-auto'
-                                        />
-                                    )
+                                    <img
+                                        src={
+                                            builtinServices[getServiceName(currentTranslateServiceInstanceKey)].info
+                                                .icon
+                                        }
+                                        className='h-[20px] my-auto'
+                                    />
                                 }
                             >
-                                {whetherPluginService(currentTranslateServiceInstanceKey) ? (
-                                    <div className='my-auto'>{`${getInstanceName(currentTranslateServiceInstanceKey, () => pluginList['translate'][getServiceName(currentTranslateServiceInstanceKey)].display)} `}</div>
-                                ) : (
-                                    <div className='my-auto'>
-                                        {getInstanceName(currentTranslateServiceInstanceKey, () =>
-                                            t(
-                                                `services.translate.${getServiceName(currentTranslateServiceInstanceKey)}.title`
-                                            )
-                                        )}
-                                    </div>
-                                )}
+                                <div className='my-auto'>
+                                    {getInstanceName(currentTranslateServiceInstanceKey, () =>
+                                        t(
+                                            `services.translate.${getServiceName(currentTranslateServiceInstanceKey)}.title`
+                                        )
+                                    )}
+                                </div>
                             </Button>
                         </DropdownTrigger>
                         <DropdownMenu
@@ -437,28 +290,17 @@ export default function TargetArea(props) {
                                     <DropdownItem
                                         key={instanceKey}
                                         startContent={
-                                            whetherPluginService(instanceKey) ? (
-                                                <img
-                                                    src={pluginList['translate'][getServiceName(instanceKey)].icon}
-                                                    className='h-[20px] my-auto'
-                                                />
-                                            ) : (
-                                                <img
-                                                    src={builtinServices[getServiceName(instanceKey)].info.icon}
-                                                    className='h-[20px] my-auto'
-                                                />
-                                            )
+                                            <img
+                                                src={builtinServices[getServiceName(instanceKey)].info.icon}
+                                                className='h-[20px] my-auto'
+                                            />
                                         }
                                     >
-                                        {whetherPluginService(instanceKey) ? (
-                                            <div className='my-auto'>{`${getInstanceName(instanceKey, () => pluginList['translate'][getServiceName(instanceKey)].display)} `}</div>
-                                        ) : (
-                                            <div className='my-auto'>
-                                                {getInstanceName(instanceKey, () =>
-                                                    t(`services.translate.${getServiceName(instanceKey)}.title`)
-                                                )}
-                                            </div>
-                                        )}
+                                        <div className='my-auto'>
+                                            {getInstanceName(instanceKey, () =>
+                                                t(`services.translate.${getServiceName(instanceKey)}.title`)
+                                            )}
+                                        </div>
                                     </DropdownItem>
                                 );
                             })}
@@ -522,14 +364,6 @@ export default function TargetArea(props) {
                                                     >
                                                         {pronunciation['symbol']}
                                                     </span>
-                                                )}
-                                                {pronunciation['voice'] && pronunciation['voice'] !== '' && (
-                                                    <HiOutlineVolumeUp
-                                                        className={`text-[${appFontSize}px] inline-block my-auto cursor-pointer`}
-                                                        onClick={() => {
-                                                            speak(pronunciation['voice']);
-                                                        }}
-                                                    />
                                                 )}
                                             </div>
                                         );
@@ -632,23 +466,6 @@ export default function TargetArea(props) {
                         className={`bg-content1 rounded-none rounded-b-[10px] flex px-[12px] p-[5px] ${hide && 'hidden'}`}
                     >
                         <ButtonGroup>
-                            {/* speak button */}
-                            <Tooltip content={t('translate.speak')}>
-                                <Button
-                                    isIconOnly
-                                    variant='light'
-                                    size='sm'
-                                    isDisabled={typeof result !== 'string' || result === ''}
-                                    onPress={() => {
-                                        handleSpeak().catch((e) => {
-                                            toast.error(e.toString(), { style: toastStyle });
-                                        });
-                                    }}
-                                >
-                                    <HiOutlineVolumeUp className='text-[16px]' />
-                                </Button>
-                            </Tooltip>
-                            {/* copy button */}
                             <Tooltip content={t('translate.copy')}>
                                 <Button
                                     isIconOnly
@@ -679,66 +496,10 @@ export default function TargetArea(props) {
                                         if (sourceLanguage === 'auto') {
                                             newSourceLanguage = 'auto';
                                         }
-                                        if (whetherPluginService(currentTranslateServiceInstanceKey)) {
-                                            const pluginInfo =
-                                                pluginList['translate'][
-                                                    getServiceName(currentTranslateServiceInstanceKey)
-                                                ];
-                                            if (
-                                                newSourceLanguage in pluginInfo.language &&
-                                                newTargetLanguage in pluginInfo.language
-                                            ) {
-                                                setIsLoading(true);
-                                                setHide(true);
-                                                const instanceConfig =
-                                                    serviceInstanceConfigMap[currentTranslateServiceInstanceKey];
-                                                instanceConfig['enable'] = 'true';
-                                                const setHideOnce = invokeOnce(setHide);
-                                                let [func, utils] = await invoke_plugin(
-                                                    'translate',
-                                                    getServiceName(currentTranslateServiceInstanceKey)
-                                                );
-                                                func(
-                                                    result.trim(),
-                                                    pluginInfo.language[newSourceLanguage],
-                                                    pluginInfo.language[newTargetLanguage],
-                                                    {
-                                                        config: instanceConfig,
-                                                        detect: detectLanguage,
-                                                        setResult: (v) => {
-                                                            setResult(v);
-                                                            setHideOnce(false);
-                                                        },
-                                                        utils,
-                                                    }
-                                                ).then(
-                                                    (v) => {
-                                                        if (v === result) {
-                                                            setResult(v + ' ');
-                                                        } else {
-                                                            setResult(v.trim());
-                                                        }
-                                                        setIsLoading(false);
-                                                        if (v !== '') {
-                                                            setHideOnce(false);
-                                                        }
-                                                    },
-                                                    (e) => {
-                                                        setError(e.toString());
-                                                        setIsLoading(false);
-                                                    }
-                                                );
-                                            } else {
-                                                setError('Language not supported');
-                                            }
-                                        } else {
-                                            const LanguageEnum =
-                                                builtinServices[getServiceName(currentTranslateServiceInstanceKey)]
-                                                    .Language;
-                                            if (
-                                                newSourceLanguage in LanguageEnum &&
-                                                newTargetLanguage in LanguageEnum
-                                            ) {
+                                        const LanguageEnum =
+                                            builtinServices[getServiceName(currentTranslateServiceInstanceKey)]
+                                                .Language;
+                                        if (newSourceLanguage in LanguageEnum && newTargetLanguage in LanguageEnum) {
                                                 setIsLoading(true);
                                                 setHide(true);
                                                 const instanceConfig =
@@ -778,8 +539,7 @@ export default function TargetArea(props) {
                                             } else {
                                                 setError('Language not supported');
                                             }
-                                        }
-                                    }}
+                                        }}
                                 >
                                     <TbTransformFilled className='text-[16px]' />
                                 </Button>
@@ -800,77 +560,6 @@ export default function TargetArea(props) {
                                     <GiCycle className='text-[16px]' />
                                 </Button>
                             </Tooltip>
-                            {/* available collection service instance */}
-                            {collectionServiceList &&
-                                collectionServiceList.map((collectionServiceInstanceName) => {
-                                    return (
-                                        <Button
-                                            key={collectionServiceInstanceName}
-                                            isIconOnly
-                                            variant='light'
-                                            size='sm'
-                                            onPress={async () => {
-                                                if (
-                                                    getServiceSouceType(collectionServiceInstanceName) ===
-                                                    ServiceSourceType.PLUGIN
-                                                ) {
-                                                    const pluginConfig =
-                                                        serviceInstanceConfigMap[collectionServiceInstanceName];
-                                                    let [func, utils] = await invoke_plugin(
-                                                        'collection',
-                                                        getServiceName(collectionServiceInstanceName)
-                                                    );
-                                                    func(sourceText.trim(), result.toString(), {
-                                                        config: pluginConfig,
-                                                        utils,
-                                                    }).then(
-                                                        (_) => {
-                                                            toast.success(t('translate.add_collection_success'), {
-                                                                style: toastStyle,
-                                                            });
-                                                        },
-                                                        (e) => {
-                                                            toast.error(e.toString(), { style: toastStyle });
-                                                        }
-                                                    );
-                                                } else {
-                                                    const instanceConfig =
-                                                        serviceInstanceConfigMap[collectionServiceInstanceName];
-                                                    builtinCollectionServices[
-                                                        getServiceName(collectionServiceInstanceName)
-                                                    ]
-                                                        .collection(sourceText, result, {
-                                                            config: instanceConfig,
-                                                        })
-                                                        .then(
-                                                            (_) => {
-                                                                toast.success(t('translate.add_collection_success'), {
-                                                                    style: toastStyle,
-                                                                });
-                                                            },
-                                                            (e) => {
-                                                                toast.error(e.toString(), { style: toastStyle });
-                                                            }
-                                                        );
-                                                }
-                                            }}
-                                        >
-                                            <img
-                                                src={
-                                                    getServiceSouceType(collectionServiceInstanceName) ===
-                                                    ServiceSourceType.PLUGIN
-                                                        ? pluginList['collection'][
-                                                              getServiceName(collectionServiceInstanceName)
-                                                          ].icon
-                                                        : builtinCollectionServices[
-                                                              getServiceName(collectionServiceInstanceName)
-                                                          ].info.icon
-                                                }
-                                                className='h-[16px] w-[16px]'
-                                            />
-                                        </Button>
-                                    );
-                                })}
                         </ButtonGroup>
                     </CardFooter>
                 </div>

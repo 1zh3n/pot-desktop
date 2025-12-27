@@ -86,31 +86,12 @@
 
 ### 4. 翻译服务精简决策（已确认）
 
-- 保留的翻译服务：
+- 当前精简版实际保留的翻译服务：
   - 通用翻译与词典：
     - `youdao`
     - `google`
-    - `bing`
-    - `ecdict`
-    - `bing_dict`
-  - 大模型翻译：
-    - `chatglm`
-- 移除的翻译服务：
-  - `alibaba`
-  - `baidu`
-  - `baidu_field`
-  - `caiyun`
-  - `cambridge_dict`
-  - `deepl`
-  - `lingva`
-  - `geminipro`
-  - `niutrans`
-  - `ollama`
-  - `openai`
-  - `tencent`
-  - `transmart`
-  - `volcengine`
-  - `yandex`
+    - `deepl`
+  - 其他服务可以在前端/配置中移除或物理删除，不再参与构建。
 
 ---
 
@@ -229,29 +210,29 @@
     - 备份：`webdav` / `aliyun` / `local` 等（取决于最终是否保留备份功能）
     - 更新：`updater_window` 及 `check_update` 等
 
-### 3. 配置模块中的服务列表裁剪
+### 3. 配置模块中的服务列表裁剪（已完成）
 
-文件：`src-tauri/src/config.rs:53-96, 101-137`
+文件：`src-tauri/src/config.rs:29-83`
 
-- 操作建议：
-  - 删除 `builtin_tts_list` 与 `builtin_collection_list`，以及关联的 `check_available` 调用。
-  - 在 `builtin_translate_list` 只保留你真正会用的翻译服务 key。
-  - 在 `builtin_recognize_list` 只保留需要的 OCR 服务 key。
-  - 如果完全不用插件，可删除 `get_plugin_list` 或至少停止在其他函数中调用。
+- 当前实现：
+  - 仅保留 `builtin_recognize_list` 和 `builtin_translate_list` 两个列表，对应 OCR 与翻译。
+  - 不再存在 `builtin_tts_list` / `builtin_collection_list`。
+  - `check_service_available` 只校验翻译和 OCR 服务，确保配置中不会出现已删除的服务 key。
 
-### 4. 插件与外部二进制
+### 4. 插件与外部二进制（已移除）
 
-文件：`src-tauri/src/cmd.rs:130-210`
+文件：`src-tauri/src/cmd.rs`
 
-- 若不需要插件系统：
-  - 删除 `install_plugin`、`run_binary` 函数。
-  - 将 `Cargo.toml` 中仅为这些功能引入的依赖（如 `zip` 等）一并移除。
+- 当前实现：
+  - `install_plugin`、`run_binary` 已删除。
+  - 仅保留与文本/截图/代理/字体/DevTools 相关的命令。
+  - `Cargo.toml` 中仅为插件与备份引入的依赖（如 `zip`、`walkdir`、`reqwest_dav` 等）已移除。
 
 ### 5. 备份 / 更新 / 语言检测等模块
 
-- `backup.rs`：若不用备份，删除文件与相关命令。
-- `updater.rs` 与 `window.rs` 中的 `updater_window`：若不用内置更新，删除。
-- `lang_detect.rs`：如果你不在本地做语言检测，可以删除模块与 `init_lang_detect()` 调用。
+- `backup.rs`：已删除，对应的 `webdav` / `local` / `aliyun` 命令也从 `invoke_handler` 中移除。
+- `updater.rs` 与 `window.rs` 中的 `updater_window`：已删除，前端不再存在更新窗口。
+- `lang_detect.rs`：仍保留本地语言检测能力，可通过配置开关决定是否启用。
 
 ---
 
